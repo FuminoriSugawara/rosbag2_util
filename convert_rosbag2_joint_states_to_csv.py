@@ -8,15 +8,13 @@ from rosbags.typesys import Stores, get_typestore
 def convert_rosbag_to_csv(bagpath, output_file='joint_states.csv'):
     # Create a type store to use if the bag has no message definitions
     typestore = get_typestore(Stores.ROS2_HUMBLE)
-    
-    # Prepare CSV headers
-    #headers = ['timestamp', 
-    #          'joint_1_pos', 'joint_2_pos', 'joint_3_pos', 'joint_4_pos', 'joint_5_pos', 'joint_6_pos', 'joint_7_pos',
-    #          'joint_1_vel', 'joint_2_vel', 'joint_3_vel', 'joint_4_vel', 'joint_5_vel', 'joint_6_vel', 'joint_7_vel',
-    #          'joint_1_effort', 'joint_2_effort', 'joint_3_effort', 'joint_4_effort', 'joint_5_effort', 'joint_6_effort', 'joint_7_effort']
-    #headers = ['timestamp', 'joint_3_pos', 'joint_3_vel', 'joint_3_effort']
-    headers = ['timestamp', 'joint_1_pos', 'joint_1_vel', 'joint_1_effort']
+    joint_names = ['joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6', 'joint_7']
 
+    # Prepare CSV headers
+    headers = ['timestamp']
+    for joint in joint_names:
+        headers.extend([f'{joint}_pos', f'{joint}_vel', f'{joint}_effort'])
+    
     print(f"Converting ROS2 bag from '{bagpath}' to CSV file '{output_file}'...")
 
     with open(output_file, 'w', newline='') as csvfile:
@@ -37,15 +35,12 @@ def convert_rosbag_to_csv(bagpath, output_file='joint_states.csv'):
                 
                 # Reorder joints to match the header order (1-7)
                 joint_order = {name: i for i, name in enumerate(msg.name)}
-                ordered_indices = [joint_order[f'joint_{i}'] for i in range(1, 2)]
-                
-                # Extract data in correct order
-                positions = [msg.position[i] for i in ordered_indices]
-                velocities = [msg.velocity[i] for i in ordered_indices]
-                efforts = [msg.effort[i] for i in ordered_indices]
+                ordered_indices = [joint_order[joint] for joint in joint_names]
                 
                 # Combine all data into a single row
-                row = [timestamp_str] + positions + velocities + efforts
+                row = [timestamp_str]
+                for i in ordered_indices:
+                    row.extend([msg.position[i], msg.velocity[i], msg.effort[i]])
                 writer.writerow(row)
                 message_count += 1
 
